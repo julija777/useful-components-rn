@@ -5,7 +5,6 @@ import DayIndicator, { DayVariant } from './DayIndicator';
 interface WeeklyProgressProps {
   streak: string[];
   currentDate?: string;
-  isPerfectWeek?: boolean;
 }
 
 // Using three-letter abbreviations to avoid confusion
@@ -14,28 +13,57 @@ const DAYS_OF_WEEK = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
 const WeeklyProgress: React.FC<WeeklyProgressProps> = ({ 
   streak, 
   currentDate = new Date().toISOString(),
-  isPerfectWeek = false
 }) => {
-  // Get the current day index (0-6)
-  const currentDayIndex = useMemo(() => {
-    return new Date(currentDate).getDay();
-  }, [currentDate]);
-
   // Animation values for each day
+  const opacityAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(0))).current;
   const scaleAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(1))).current;
 
-  // Find the last day of the streak
-  const lastStreakDayIndex = useMemo(() => {
-    if (streak.length === 0) return -1;
-    const lastStreakDate = new Date(streak[streak.length - 1]);
-    return lastStreakDate.getDay();
-  }, [streak]);
+  // Determine if this is a perfect week
+  const isPerfectWeek = streak.length === 7;
 
-  // Animate only the last day of the streak
+  // Animate the appearance of days in a loop
   useEffect(() => {
-    if (lastStreakDayIndex === -1) return;
+    const startAnimation = () => {
+      // Reset all animations
+      DAYS_OF_WEEK.forEach((_, index) => {
+        opacityAnims[index].setValue(0);
+      });
 
-    const lastDayAnim = scaleAnims[lastStreakDayIndex];
+      const animations = streak.map((date, index) => {
+        const dayIndex = new Date(date).getDay();
+        return Animated.sequence([
+          Animated.delay(index * 100),
+          Animated.timing(opacityAnims[dayIndex], {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          })
+        ]);
+      });
+
+      Animated.stagger(100, animations).start(() => {
+        // After animation completes, start again after a delay
+        setTimeout(startAnimation, 2000);
+      });
+    };
+
+    startAnimation();
+
+    return () => {
+      // Cleanup
+      DAYS_OF_WEEK.forEach((_, index) => {
+        opacityAnims[index].stopAnimation();
+      });
+    };
+  }, [streak, opacityAnims]);
+
+  // Animate the last day
+  useEffect(() => {
+    if (streak.length === 0) return;
+    
+    const lastDate = new Date(streak[streak.length - 1]);
+    const lastDayIndex = lastDate.getDay();
+    const lastDayAnim = scaleAnims[lastDayIndex];
     
     const pulseAnimation = Animated.sequence([
       Animated.timing(lastDayAnim, {
@@ -56,28 +84,19 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
     return () => {
       loopAnimation.stop();
     };
-  }, [lastStreakDayIndex, scaleAnims]);
+  }, [streak, scaleAnims]);
 
   // Get the variant for each day
-  const getDayVariant = (dayIndex: number): DayVariant => {
-    const isCurrentDay = dayIndex === currentDayIndex;
-    const isLastStreakDay = dayIndex === lastStreakDayIndex;
-    
-    // Check if this day is in the streak
-    const isInStreak = streak.some(date => {
-      const streakDate = new Date(date);
-      return streakDate.getDay() === dayIndex;
-    });
-
+  const getDayVariant = (index: number): DayVariant => {
     if (isPerfectWeek) {
-      return isLastStreakDay ? 'flameHighlighted' : 'flame';
+      const isLastDay = streak.some(date => new Date(date).getDay() === index) && 
+                       index === new Date(streak[streak.length - 1]).getDay();
+      return isLastDay ? 'flameHighlighted' : 'flame';
     }
     
-    if (isInStreak) {
-      return isLastStreakDay ? 'checkHighlighted' : 'check';
-    }
-
-    return 'plain';
+    const isLastDay = streak.some(date => new Date(date).getDay() === index) && 
+                     index === new Date(streak[streak.length - 1]).getDay();
+    return isLastDay ? 'checkHighlighted' : 'check';
   };
 
   return (
@@ -102,11 +121,11 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
                 styles.circleContainer,
                 { 
                   transform: [{ scale: scaleAnims[index] }],
-                  opacity: isInStreak ? 1 : 0.7
+                  opacity: isInStreak ? opacityAnims[index] : 0.7
                 }
               ]}
             >
-              <DayIndicator variant={variant} />
+              {isInStreak && <DayIndicator variant={variant} />}
             </Animated.View>
           );
         })}
@@ -117,32 +136,30 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#000',
-    borderRadius: 10,
-    width: '100%',
+    marginBottom: 30,
   },
   daysRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
     marginBottom: 10,
   },
   dayText: {
-    color: '#FFF',
+    color: '#666',
     fontSize: 12,
-    textAlign: 'center',
+    fontWeight: '500',
     width: 40,
+    textAlign: 'center',
   },
   circlesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
   },
   circleContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
 });
 
 export default WeeklyProgress;

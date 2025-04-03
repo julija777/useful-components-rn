@@ -8,7 +8,8 @@ interface MonthlyProgressProps {
 }
 
 const { width } = Dimensions.get('window');
-const DAY_SIZE = (width - 40) / 7; // 7 days in a week, 20px padding on each side
+const DAY_SIZE = Math.floor((width - 40) / 8); // Ensure consistent width for all days
+const DAYS_OF_WEEK = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
 
 const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ 
   streak, 
@@ -27,6 +28,15 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
     }).filter(Boolean);
   }, [streak]);
 
+  // Determine streak type
+  const streakType = useMemo(() => {
+    if (streak.length === 1) return 'single';
+    if (streak.length === 4) return 'four';
+    if (streak.length === 7) return 'perfect';
+    if (streak.length === 9) return 'nine';
+    return 'other';
+  }, [streak]);
+
   // Animate the appearance of days and connecting lines in a loop
   useEffect(() => {
     const startAnimation = () => {
@@ -38,7 +48,7 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
 
       const animations = streak.map((_, index) => {
         const isPerfectWeekDay = (index + 1) % 7 === 0;
-        const delay = isPerfectWeekDay ? index * 200 : 0;
+        const delay = isPerfectWeekDay && streakType === 'perfect' ? 0 : index * 100;
 
         return Animated.sequence([
           Animated.delay(delay),
@@ -72,7 +82,7 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
         lineWidthAnims[index].stopAnimation();
       });
     };
-  }, [streak, opacityAnims, lineWidthAnims]);
+  }, [streak, opacityAnims, lineWidthAnims, streakType]);
 
   // Animate the last perfect week day
   useEffect(() => {
@@ -83,13 +93,13 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
     
     const pulseAnimation = Animated.sequence([
       Animated.timing(lastDayAnim, {
-        toValue: 1.1,
-        duration: 500,
+        toValue: 1,
+        duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(lastDayAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 50,
         useNativeDriver: true,
       }),
     ]);
@@ -102,18 +112,28 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
     };
   }, [perfectWeekDays, scaleAnims]);
 
-  // Get the variant for each day
+  // Get the variant for each day based on streak type
   const getDayVariant = (index: number): DayVariant => {
     const dayNumber = index + 1;
-    const isPerfectWeekDay = dayNumber % 7 === 0;
-    const isLastPerfectWeekDay = dayNumber === perfectWeekDays[perfectWeekDays.length - 1];
 
-    if (isPerfectWeekDay) {
-      return isLastPerfectWeekDay ? 'flameHighlighted' : 'flame';
+    switch (streakType) {
+      case 'single':
+        return 'checkHighlighted';
+      case 'four':
+        return dayNumber === 4 ? 'checkHighlighted' : 'check';
+      case 'perfect':
+        const isPerfectWeekDay = dayNumber % 7 === 0;
+        const isLastPerfectWeekDay = dayNumber === perfectWeekDays[perfectWeekDays.length - 1];
+        return isPerfectWeekDay ? (isLastPerfectWeekDay ? 'flameHighlighted' : 'flame') : 'flame';
+      case 'nine':
+        if (dayNumber <= 7) {
+          const isPerfectWeekDay = dayNumber % 7 === 0;
+          return isPerfectWeekDay ? 'flame' : 'flame';
+        }
+        return dayNumber === 9 ? 'checkHighlighted' : 'check';
+      default:
+        return 'check';
     }
-    
-    // Days 1-6 should have the 'flame' variant
-    return 'flame';
   };
 
   // Get the current month's first day and last day
@@ -127,9 +147,8 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
 
   // Render week days header
   const renderWeekDays = () => {
-    const weekDays = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
-    return weekDays.map((day, index) => (
-      <View key={index} style={styles.weekDayContainer}>
+    return DAYS_OF_WEEK.map((day, index) => (
+      <View key={index} style={[styles.weekDayContainer, { width: DAY_SIZE }]}>
         <Text style={styles.weekDayText}>{day}</Text>
       </View>
     ));
@@ -143,7 +162,11 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDay; i++) {
-      days.push(<View key={`empty-${i}`} style={styles.dayContainer} />);
+      days.push(
+        <View key={`empty-${i}`} style={[styles.dayWrapper, { width: DAY_SIZE }]}>
+          <View style={[styles.dayContainer, { width: DAY_SIZE }]} />
+        </View>
+      );
     }
 
     // Add days of the month
@@ -153,7 +176,7 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
       const isPerfectWeekDay = isInStreak && (streakIndex + 1) % 7 === 0;
       
       days.push(
-        <View key={`day-${day}`} style={styles.dayWrapper}>
+        <View key={`day-${day}`} style={[styles.dayWrapper, { width: DAY_SIZE }]}>
           {isInStreak && !isPerfectWeekDay && (
             <Animated.View 
               style={[
@@ -186,6 +209,19 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
       day++;
     }
 
+    // Add empty cells for remaining days in the last week
+    const totalCells = days.length;
+    const remainingCells = 7 - (totalCells % 7);
+    if (remainingCells < 7) {
+      for (let i = 0; i < remainingCells; i++) {
+        days.push(
+          <View key={`empty-end-${i}`} style={[styles.dayWrapper, { width: DAY_SIZE }]}>
+            <View style={[styles.dayContainer, { width: DAY_SIZE }]} />
+          </View>
+        );
+      }
+    }
+
     return days;
   };
 
@@ -206,46 +242,49 @@ const styles = StyleSheet.create({
   weekDaysContainer: {
     flexDirection: 'row',
     marginBottom: 10,
+    width: '100%',
   },
   weekDayContainer: {
     width: DAY_SIZE,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   weekDayText: {
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+    textAlign: 'center',
   },
   calendarContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    width: '100%',
   },
   dayWrapper: {
     position: 'relative',
-    width: DAY_SIZE,
     height: DAY_SIZE,
+    width: DAY_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dayContainer: {
-    width: DAY_SIZE,
     height: DAY_SIZE,
+    width: DAY_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 5,
   },
   dayText: {
     color: '#FFF',
     fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   connectingLine: {
     position: 'absolute',
     height: 2,
-    backgroundColor: '#7241FF',
+    backgroundColor: '#666',
     top: '50%',
-    left: 0,
+    left: '50%',
     zIndex: -1,
   },
 });
