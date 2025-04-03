@@ -9,7 +9,7 @@ interface WeeklyProgressProps {
 }
 
 // Using three-letter abbreviations to avoid confusion
-const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS_OF_WEEK = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
 
 const WeeklyProgress: React.FC<WeeklyProgressProps> = ({ 
   streak, 
@@ -23,19 +23,27 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
 
   // Animation values for each day
   const scaleAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(1))).current;
-  const perfectWeekAnim = useRef(new Animated.Value(0)).current;
 
-  // Animate current day
+  // Find the last day of the streak
+  const lastStreakDayIndex = useMemo(() => {
+    if (streak.length === 0) return -1;
+    const lastStreakDate = new Date(streak[streak.length - 1]);
+    return lastStreakDate.getDay();
+  }, [streak]);
+
+  // Animate only the last day of the streak
   useEffect(() => {
-    const currentDayAnim = scaleAnims[currentDayIndex];
+    if (lastStreakDayIndex === -1) return;
+
+    const lastDayAnim = scaleAnims[lastStreakDayIndex];
     
     const pulseAnimation = Animated.sequence([
-      Animated.timing(currentDayAnim, {
+      Animated.timing(lastDayAnim, {
         toValue: 1.1,
         duration: 500,
         useNativeDriver: true,
       }),
-      Animated.timing(currentDayAnim, {
+      Animated.timing(lastDayAnim, {
         toValue: 1,
         duration: 500,
         useNativeDriver: true,
@@ -48,24 +56,12 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
     return () => {
       loopAnimation.stop();
     };
-  }, [currentDayIndex, scaleAnims]);
-
-  // Animate perfect week message
-  useEffect(() => {
-    if (isPerfectWeek) {
-      Animated.timing(perfectWeekAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      perfectWeekAnim.setValue(0);
-    }
-  }, [isPerfectWeek, perfectWeekAnim]);
+  }, [lastStreakDayIndex, scaleAnims]);
 
   // Get the variant for each day
   const getDayVariant = (dayIndex: number): DayVariant => {
     const isCurrentDay = dayIndex === currentDayIndex;
+    const isLastStreakDay = dayIndex === lastStreakDayIndex;
     
     // Check if this day is in the streak
     const isInStreak = streak.some(date => {
@@ -74,11 +70,11 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
     });
 
     if (isPerfectWeek) {
-      return isCurrentDay ? 'flameHighlighted' : 'flame';
+      return isLastStreakDay ? 'flameHighlighted' : 'flame';
     }
     
     if (isInStreak) {
-      return isCurrentDay ? 'checkHighlighted' : 'check';
+      return isLastStreakDay ? 'checkHighlighted' : 'check';
     }
 
     return 'plain';
@@ -97,7 +93,6 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
       <View style={styles.circlesRow}>
         {DAYS_OF_WEEK.map((_, index) => {
           const variant = getDayVariant(index);
-          const isCurrentDay = index === currentDayIndex;
           const isInStreak = streak.some(date => new Date(date).getDay() === index);
           
           return (
@@ -116,25 +111,6 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
           );
         })}
       </View>
-      
-      {isPerfectWeek && (
-        <Animated.View 
-          style={[
-            { 
-              opacity: perfectWeekAnim,
-              transform: [
-                { 
-                  translateY: perfectWeekAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-        </Animated.View>
-      )}
     </View>
   );
 };
@@ -166,18 +142,7 @@ const styles = StyleSheet.create({
   },
   circleContainer: {
     alignItems: 'center',
-  },
-  perfectWeekContainer: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: 'rgba(255, 126, 95, 0.2)',
-    borderRadius: 5,
-  },
-  perfectWeekText: {
-    color: '#FF7E5F',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  }
 });
 
 export default WeeklyProgress;

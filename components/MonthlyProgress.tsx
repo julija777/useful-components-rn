@@ -1,79 +1,133 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { WorkoutData, getWorkoutData } from '../mockApi/workoutData';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, StyleSheet, Text, Animated, Dimensions } from 'react-native';
+import DayIndicator, { DayVariant } from './DayIndicator';
+
+interface MonthlyProgressProps {
+  streak: string[];
+  currentDate?: string;
+}
 
 const { width } = Dimensions.get('window');
 const DAY_SIZE = (width - 40) / 7; // 7 days in a week, 20px padding on each side
 
-interface MonthlyProgressProps {
-  yearMonth: string; // Format: 'YYYY-MM'
-}
+const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ 
+  streak, 
+  currentDate = new Date().toISOString(),
+}) => {
+  // Animation values for each day
+  const opacityAnims = useRef(streak.map(() => new Animated.Value(0))).current;
+  const scaleAnims = useRef(streak.map(() => new Animated.Value(1))).current;
+  const lineWidthAnims = useRef(streak.map(() => new Animated.Value(0))).current;
 
-const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ yearMonth }) => {
-  const workoutData = getWorkoutData(yearMonth);
-  const [year, month] = yearMonth.split('-').map(Number);
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
+  // Find perfect week days (every 7th day)
+  const perfectWeekDays = useMemo(() => {
+    return streak.map((date, index) => {
+      const dayNumber = index + 1;
+      return dayNumber % 7 === 0 ? dayNumber : null;
+    }).filter(Boolean);
+  }, [streak]);
+
+  // Animate the appearance of days and connecting lines in a loop
+  useEffect(() => {
+    const startAnimation = () => {
+      // Reset all animations
+      streak.forEach((_, index) => {
+        opacityAnims[index].setValue(0);
+        lineWidthAnims[index].setValue(0);
+      });
+
+      const animations = streak.map((_, index) => {
+        const isPerfectWeekDay = (index + 1) % 7 === 0;
+        const delay = isPerfectWeekDay ? index * 200 : 0;
+
+        return Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(opacityAnims[index], {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(lineWidthAnims[index], {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: false,
+            })
+          ])
+        ]);
+      });
+
+      Animated.stagger(100, animations).start(() => {
+        // After animation completes, start again after a delay
+        setTimeout(startAnimation, 2000);
+      });
+    };
+
+    startAnimation();
+
+    return () => {
+      // Cleanup
+      streak.forEach((_, index) => {
+        opacityAnims[index].stopAnimation();
+        lineWidthAnims[index].stopAnimation();
+      });
+    };
+  }, [streak, opacityAnims, lineWidthAnims]);
+
+  // Animate the last perfect week day
+  useEffect(() => {
+    if (perfectWeekDays.length === 0) return;
+    
+    const lastPerfectWeekIndex = (perfectWeekDays[perfectWeekDays.length - 1] ?? 0) - 1;
+    const lastDayAnim = scaleAnims[lastPerfectWeekIndex];
+    
+    const pulseAnimation = Animated.sequence([
+      Animated.timing(lastDayAnim, {
+        toValue: 1.1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(lastDayAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    const loopAnimation = Animated.loop(pulseAnimation);
+    loopAnimation.start();
+    
+    return () => {
+      loopAnimation.stop();
+    };
+  }, [perfectWeekDays, scaleAnims]);
+
+  // Get the variant for each day
+  const getDayVariant = (index: number): DayVariant => {
+    const dayNumber = index + 1;
+    const isPerfectWeekDay = dayNumber % 7 === 0;
+    const isLastPerfectWeekDay = dayNumber === perfectWeekDays[perfectWeekDays.length - 1];
+
+    if (isPerfectWeekDay) {
+      return isLastPerfectWeekDay ? 'flameHighlighted' : 'flame';
+    }
+    
+    // Days 1-6 should have the 'flame' variant
+    return 'flame';
+  };
+
+  // Get the current month's first day and last day
+  const currentDateObj = new Date(currentDate);
+  const year = currentDateObj.getFullYear();
+  const month = currentDateObj.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
   const startingDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-  const hasWorkoutOnDate = (date: Date): WorkoutData | undefined => {
-    const dateStr = date.toISOString().split('T')[0];
-    return workoutData.find(workout => workout.date === dateStr);
-  };
-
-  const isWeekComplete = (startDate: Date): boolean => {
-    for (let i = 0; i < 7; i++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + i);
-      if (!hasWorkoutOnDate(currentDate)) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const renderDay = (day: number) => {
-    const date = new Date(year, month - 1, day);
-    const workout = hasWorkoutOnDate(date);
-    
-    if (!workout) {
-      return (
-        <View style={styles.dayContainer}>
-          <Text style={styles.dayText}>{day}</Text>
-        </View>
-      );
-    }
-
-    // Check if this day completes a week
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay()); // Start of the week
-    const isFlame = workout.type === 'flame';
-
-    return (
-      <View style={styles.dayContainer}>
-        <LinearGradient
-          colors={['#FF6B6B', '#FF8E8E']}
-          style={styles.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.dayText}>{day}</Text>
-          <MaterialCommunityIcons
-            name={isFlame ? 'fire' : 'check'}
-            size={16}
-            color="white"
-            style={styles.icon}
-          />
-        </LinearGradient>
-      </View>
-    );
-  };
-
+  // Render week days header
   const renderWeekDays = () => {
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekDays = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
     return weekDays.map((day, index) => (
       <View key={index} style={styles.weekDayContainer}>
         <Text style={styles.weekDayText}>{day}</Text>
@@ -81,9 +135,11 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ yearMonth }) => {
     ));
   };
 
+  // Render calendar days
   const renderCalendar = () => {
     const days = [];
     let day = 1;
+    let streakIndex = 0;
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDay; i++) {
@@ -92,11 +148,41 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ yearMonth }) => {
 
     // Add days of the month
     while (day <= daysInMonth) {
+      const isInStreak = streakIndex < streak.length;
+      const variant = isInStreak ? getDayVariant(streakIndex) : 'plain';
+      const isPerfectWeekDay = isInStreak && (streakIndex + 1) % 7 === 0;
+      
       days.push(
-        <View key={`day-${day}`} style={styles.dayContainer}>
-          {renderDay(day)}
+        <View key={`day-${day}`} style={styles.dayWrapper}>
+          {isInStreak && !isPerfectWeekDay && (
+            <Animated.View 
+              style={[
+                styles.connectingLine,
+                { 
+                  width: lineWidthAnims[streakIndex].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%']
+                  })
+                }
+              ]} 
+            />
+          )}
+          <Animated.View 
+            style={[
+              styles.dayContainer,
+              { 
+                opacity: isInStreak ? opacityAnims[streakIndex] : 1,
+                transform: [{ scale: isInStreak ? scaleAnims[streakIndex] : 1 }]
+              }
+            ]}
+          >
+            <Text style={styles.dayText}>{day}</Text>
+            {isInStreak && <DayIndicator variant={variant} />}
+          </Animated.View>
         </View>
       );
+      
+      if (isInStreak) streakIndex++;
       day++;
     }
 
@@ -114,6 +200,8 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({ yearMonth }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    backgroundColor: '#000',
+    borderRadius: 10,
   },
   weekDaysContainer: {
     flexDirection: 'row',
@@ -132,6 +220,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  dayWrapper: {
+    position: 'relative',
+    width: DAY_SIZE,
+    height: DAY_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dayContainer: {
     width: DAY_SIZE,
     height: DAY_SIZE,
@@ -139,21 +234,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 5,
   },
-  gradient: {
-    width: DAY_SIZE - 10,
-    height: DAY_SIZE - 10,
-    borderRadius: (DAY_SIZE - 10) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   dayText: {
-    color: 'white',
+    color: '#FFF',
     fontSize: 14,
     fontWeight: 'bold',
+    marginBottom: 5,
   },
-  icon: {
+  connectingLine: {
     position: 'absolute',
-    bottom: 5,
+    height: 2,
+    backgroundColor: '#7241FF',
+    top: '50%',
+    left: 0,
+    zIndex: -1,
   },
 });
 

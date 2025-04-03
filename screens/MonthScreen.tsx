@@ -1,18 +1,47 @@
 import React from 'react';
-import { View, StyleSheet, Text, ScrollView } from 'react-native';
-import WeeklyProgress from '../components/WeeklyProgress';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import MonthlyProgress from '../components/MonthlyProgress';
 import workoutData from '../mockApi/workoutData.json';
 
+// Example scenarios from README
+
 export default function MonthScreen() {
-  // Check if we have a perfect week (7 or more consecutive days)
-  const isPerfectWeek = workoutData['2023-07'].length >= 7;
+  const currentDate = new Date().toISOString();
 
   return (
-    <View style={styles.container}>
-      <WeeklyProgress streak={workoutData['2023-07']} isPerfectWeek={isPerfectWeek} />
-      <WeeklyProgress streak={[]} />
-      <WeeklyProgress streak={[]}  />
-    </View>
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.title}>One Day Streak</Text>
+        <MonthlyProgress 
+          streak={workoutData.singleDay} 
+          currentDate={currentDate}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.title}>Four Day Streak</Text>
+        <MonthlyProgress 
+          streak={workoutData.fourDay} 
+          currentDate={currentDate}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.title}>Perfect Week</Text>
+        <MonthlyProgress 
+          streak={workoutData.perfectWeek} 
+          currentDate={currentDate}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.title}>Nine Day Streak</Text>
+        <MonthlyProgress 
+          streak={workoutData.nineDay} 
+          currentDate={currentDate}
+        />
+      </View>
+    </ScrollView>
   );
 }
 
@@ -22,22 +51,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
   section: {
     marginBottom: 30,
   },
-  sectionTitle: {
+  title: {
+    color: '#FFF',
     fontSize: 18,
-    color: 'white',
+    fontWeight: 'bold',
     marginBottom: 10,
   },
 }); 
