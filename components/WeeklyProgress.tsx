@@ -17,6 +17,7 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
   // Animation values for each day
   const opacityAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(0))).current;
   const scaleAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(1))).current;
+  const lineAnims = useRef(DAYS_OF_WEEK.map(() => new Animated.Value(0))).current;
 
   // Determine if this is a perfect week
   const isPerfectWeek = streak.length === 7;
@@ -27,17 +28,25 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
       // Reset all animations
       DAYS_OF_WEEK.forEach((_, index) => {
         opacityAnims[index].setValue(0);
+        lineAnims[index].setValue(0);
       });
 
       const animations = streak.map((date, index) => {
         const dayIndex = new Date(date).getDay();
         return Animated.sequence([
           Animated.delay(index * 100),
-          Animated.timing(opacityAnims[dayIndex], {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          })
+          Animated.parallel([
+            Animated.timing(opacityAnims[dayIndex], {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(lineAnims[dayIndex], {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: false,
+            })
+          ])
         ]);
       });
 
@@ -53,9 +62,10 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
       // Cleanup
       DAYS_OF_WEEK.forEach((_, index) => {
         opacityAnims[index].stopAnimation();
+        lineAnims[index].stopAnimation();
       });
     };
-  }, [streak, opacityAnims]);
+  }, [streak, opacityAnims, lineAnims]);
 
   // Animate the last day
   useEffect(() => {
@@ -115,18 +125,32 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
           const isInStreak = streak.some(date => new Date(date).getDay() === index);
           
           return (
-            <Animated.View 
-              key={`circle-${index}`}
-              style={[
-                styles.circleContainer,
-                { 
-                  transform: [{ scale: scaleAnims[index] }],
-                  opacity: isInStreak ? opacityAnims[index] : 0.7
-                }
-              ]}
-            >
-              {isInStreak && <DayIndicator variant={variant} />}
-            </Animated.View>
+            <View key={`circle-${index}`} style={styles.circleWrapper}>
+              {isPerfectWeek && isInStreak && (
+                <Animated.View 
+                  style={[
+                    styles.backgroundLine,
+                    {
+                      width: lineAnims[index].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%']
+                      })
+                    }
+                  ]}
+                />
+              )}
+              <Animated.View 
+                style={[
+                  styles.circleContainer,
+                  { 
+                    transform: [{ scale: scaleAnims[index] }],
+                    opacity: isInStreak ? opacityAnims[index] : 0.7
+                  }
+                ]}
+              >
+                {isInStreak && <DayIndicator variant={variant} />}
+              </Animated.View>
+            </View>
           );
         })}
       </View>
@@ -154,11 +178,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  circleWrapper: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
   circleContainer: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backgroundLine: {
+    position: 'absolute',
+    height: 40,
+    backgroundColor: 'white',
+    top: 0,
+    left: 0,
+    zIndex: -1,
+    borderRadius: 20,
   },
 });
 

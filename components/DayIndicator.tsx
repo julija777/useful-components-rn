@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import FlameIcon from '../assets/flameIcon';
+import FlameIndicator from './FlameIndicator';
+
 
 export type DayVariant = 'plain' | 'check' | 'checkHighlighted' | 'flame' | 'flameHighlighted';
 
@@ -37,7 +38,8 @@ const DayIndicator: React.FC<DayIndicatorProps> = ({ variant }) => {
       )}
       
       {isFlame && (
-        <Ionicons name="flame" size={20} color="white" style={styles.icon} />
+       <Ionicons name="flame" size={20} color="white" style={styles.icon} />
+      
        
       )}
     </View>

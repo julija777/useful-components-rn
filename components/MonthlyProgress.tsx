@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Animated } from 'react-native';
 import { useStreak } from '../hooks/useStreak';
 import { useStreakAnimation } from '../hooks/useStreakAnimation';
@@ -39,6 +39,35 @@ const MonthlyProgress: React.FC<MonthlyProgressProps> = ({
 
   const { streakType, perfectWeekDays } = useStreak(streak, currentDate);
   const { opacityAnims, scaleAnims, lineWidthAnims } = useStreakAnimation(streak.length);
+
+  // Add jumping animation for perfect weeks
+  useEffect(() => {
+    if (streakType !== 'perfect' || streak.length === 0) return;
+    
+    const lastPerfectWeekDay = perfectWeekDays[perfectWeekDays.length - 1];
+    const lastDayIndex = lastPerfectWeekDay - 1; // Convert to 0-based index
+    const lastDayAnim = scaleAnims[lastDayIndex];
+    
+    const pulseAnimation = Animated.sequence([
+      Animated.timing(lastDayAnim, {
+        toValue: 1.1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(lastDayAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    const loopAnimation = Animated.loop(pulseAnimation);
+    loopAnimation.start();
+    
+    return () => {
+      loopAnimation.stop();
+    };
+  }, [streakType, perfectWeekDays, scaleAnims]);
 
   // Get the current month's first day and last day
   const currentDateObj = new Date(currentDate);
