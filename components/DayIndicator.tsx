@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import FlameIndicator from './FlameIndicator';
+
 
 
 export type DayVariant = 'plain' | 'check' | 'checkHighlighted' | 'flame' | 'flameHighlighted';

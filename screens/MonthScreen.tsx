@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import MonthlyProgress from '../components/MonthlyProgress';
 import workoutData from '../mockApi/workoutData.json';
 
-// Example scenarios from README
 
 export default function MonthScreen() {
   const currentDate = new Date().toISOString();
