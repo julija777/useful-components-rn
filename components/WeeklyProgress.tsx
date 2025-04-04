@@ -113,7 +113,7 @@ const WeeklyProgress: React.FC<WeeklyProgressProps> = ({
     <View style={styles.container}>
       <View style={styles.daysRow}>
         {DAYS_OF_WEEK.map((day, index) => (
-          <Text key={`day-${day}`} style={styles.dayText}>
+          <Text key={`day-${index}`} style={styles.dayText}>
             {day}
           </Text>
         ))}
