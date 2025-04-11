@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "technical-exercise-rn",
-    "slug": "technical-exercise-rn",
+    "name": "useful-components-rn",
+    "slug": "useful-components-rn",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,6 +26,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "technical-exercise-rn"
+    "scheme": "useful-components-rn"
   }
 }

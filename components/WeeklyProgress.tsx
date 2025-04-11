@@ -8,7 +8,7 @@ interface WeeklyProgressProps {
 }
 
 // Using three-letter abbreviations to avoid confusion
-const DAYS_OF_WEEK = ['S', 'M', 'Tu', 'W', 'T', 'F', 'S'];
+const DAYS_OF_WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const WeeklyProgress: React.FC<WeeklyProgressProps> = ({ 
   streak, 

@@ -6,7 +6,7 @@ import { calendarStyles, DAY_SIZE } from '../styles/calendar';
 import { MonthlyProgressProps, DayVariant } from '../types/streak';
 import DayIndicator from './DayIndicator';
 
-const DAYS_OF_WEEK = ['S', 'M', 'Tu', 'W', 'T', 'F', 'S'];
+const DAYS_OF_WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 type StreakType = 'single' | 'four' | 'perfect' | 'nine' | 'other';
 
