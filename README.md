@@ -21,6 +21,11 @@ This repository is designed to:
    ```bash
    npm start
 
+## Video Demo
+
+https://github.com/your-username/useful-components-rn/assets/WeeklyProgress:MonthlyProgress.mov
+
+*Watch the app demo video above*
 
 ## Project Structure
 
