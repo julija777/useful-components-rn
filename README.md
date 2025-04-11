@@ -23,7 +23,8 @@ This repository is designed to:
 
 ## Video Demo
 
-https://github.com/your-username/useful-components-rn/assets/WeeklyProgress:MonthlyProgress.mov
+https://youtube.com/shorts/9oJFLPx8Xqs?feature=share
+
 
 *Watch the app demo video above*
 
